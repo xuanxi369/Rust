@@ -988,3 +988,246 @@
 //          需要修改但不用拿走 → 形参用 &mut T。
 //          需要接管所有权 → 形参用 T。
 
+
+
+
+
+
+                                      //复合类型
+//结构体：往往是一个程序的骨干
+//结构体是一种自定义复合数据类型，可以把多个相关值打包成一个整体。
+
+// 如何定义一个结构体
+//使用 struct 关键字，后面跟结构体名字（大写驼峰式），
+//     然后在花括号里列出每个字段（field）的名称和类型。
+// struct User {
+//     active: bool,
+//     username: String,
+//     email: String,
+//     sign_in_count: u64,
+// }
+
+
+//如何创建（实例化）一个结构体？
+   //像这样，为每个字段赋值:
+//  fn main() {
+//     let user1 = User {
+//         active: true,                
+//         username: String::from("someusername123"),
+//         email: String::from("someone@example.com"),
+//         sign_in_count: 1,
+//     };
+// } // 创建实例时，字段顺序无所谓，只要字段名正确即可。
+
+
+//可变性
+//默认情况下，实例不可变，所有字段都不能改。
+//   如果想让某个实例能修改字段，在 let 后面加 mut：
+// fn main() {
+//     let mut user1 = User {          // mut 让整个实例可变
+//         active: true,
+//         username: String::from("someusername123"),
+//         email: String::from("someone@example.com"),
+//         sign_in_count: 1,
+//     };
+//     user1.email = String::from("123@123.com");   // 可以修改
+// } //Rust 不允许单独把某个字段标记为可变，可变性是针对整个实例的。
+
+
+//字段简写（当变量名与字段名相同时）
+//     如果你已经有同名的变量，赋值时可以省略字段名重复，这是非常常见的写法：
+// fn main() {
+//     let active = true;
+//     let username = String::from("123");
+//     let email = String::from("123@123");
+
+//     let user1 = User {
+//         active,          // 相当于 active: active
+//         username,        // 相当于 username: username
+//         email,           // 相当于 email: email
+//         sign_in_count: 1,
+//     };
+// }// 当你有很多字段时，这种简写能大幅减少冗余代码
+
+
+//结构体更新语法（..）
+//如果你想基于一个已有的实例，只改其中几个字段，
+//            其余字段复用旧实例的值，可以这样写：
+// fn main() {
+//     let user1 = User {
+//         active: true,
+//         username: String::from("someusername123"),
+//         email: String::from("someone@example.com"),
+//         sign_in_count: 1,
+//     };
+
+//     let user2 = User {
+//         email: String::from("another@example.com"),
+//         username: String::from("anothername567"),
+//         ..user1     // 剩余字段（active 和 sign_in_count）从 user1 复制
+//     };  //注意：..user1 必须放在最后面，表示“未列举的字段都来自 user1”。
+}//这里有个所有权细节：
+//如果字段是 String 这种没有实现 Copy 的类型，user1 的部分数据会被移动到 user2，
+// 之后 user1 就不能再整体使用了（除非所有字段都实现了 Copy）
+//触发所有权事件的唯一条件是：你试图把某个字段的“所有权”转交给别人（比如 user2）。
+//所有权事件（Move）不是由‘类型是 String’触发的，
+//   而是由‘你试图把 String 类型的值，从一个地方赋值给另一个地方’触发的。
+
+                                    //哪些类型是“复印机”（不会触发所有权事件）
+
+ //                             类型分类	       具体例子	                      是否触发所有权移动？
+ //                           所有整数	     i32, u32, i64, usize 等	          ❌ 不触发（复印）
+ //                           所有浮点数	        f32, f64	                  ❌ 不触发（复印）
+ //                           布尔值	         bool (true / false)	          ❌ 不触发（复印）
+ //                           字符	            char	                          ❌ 不触发（复印）
+ //                       只包含上述类型的元组	  (i32, f64)	                 ❌ 不触发（复印）
+ //                       只包含上述类型的数组	  [i32; 5] (固定大小数组)	      ❌ 不触发（复印）
+
+                        //这些类型只活在栈上，没有指向堆上的“遥控器”，
+                                    //复印起来毫无代价。它们赋值给新变量时，原变量依然有效。
+
+                                             //一定会触发所有权的类型
+
+ //                               类型分类	        具体例子	                   是否触发所有权移动？
+ //                               字符串	             String	                     ✅ 触发（移动）
+ //                               动态数组	    Vec<T> (例如 Vec<i32>)	         ✅ 触发（移动）
+ //                               哈希表	            HashMap<K, V>	             ✅ 触发（移动）
+ //                      任意包含堆数据的结构体	自定义的 struct User { name: String }	✅ 触发（移动）
+ //                               智能指针	        Box<T>, Rc<T> 等	         ✅ 触发（移动）
+ //                               文件/网络连接句柄    File, TcpStream	         ✅ 触发（移动）
+     
+//                                   这些类型的“本体”在堆上，变量只是拿着指向堆的“遥控器”。
+//                                        复印遥控器会导致两个人都能遥控同一块地，这是 Rust 绝对禁止的，
+//                                        所以只能“搬走”遥控器（原变量作废）
+
+
+//示例
+
+// #[derive(Debug)]
+// struct User {
+//     name: String,  // 堆上的字符串（非 Copy）
+//     age: u32,      // 栈上的数字（Copy）
+// }
+
+// fn main() {
+//     let user1 = User {
+//         name: String::from("Alice"),
+//         age: 30,
+//     };
+
+//     let user2 = user1; // 整坨 user1 赋值给 user2
+
+//     // 尝试打印 user1
+//     println!("{:?}", user1); // ❌ 报错！value used here after move
+// }//Rust 会把整个 user1 的所有权整体搬走（包括 age 那个数字也被打包带走了），user1 彻底作废。
+
+
+
+
+
+//元组结构体（Tuple Struct）
+//你还可以定义类似元组的结构体，不命名字段，只给类型：
+// struct Color(u8, u8, u8);
+// let black = Color(0, 0, 0);   // 访问时用 .0、.1 等，和元组一样。这种适合包装简单数据。
+
+
+ //单元结构体（Unit-Like Struct）
+//   没有字段的结构体，常用于表示某种“标志”或实现 trait：
+// struct AlwaysEqual;
+// let a = AlwaysEqual;
+
+
+//为结构体添加方法（impl 块）
+//   结构体不只是数据的容器，还可以定义行为（方法）。在 impl 块里写函数
+impl User {
+    // 方法：第一个参数是 &self（或 self、&mut self）
+    fn display(&self) -> String {
+        format!("{} <{}>", self.username, self.email)
+    }
+
+    // 关联函数（类似静态方法），没有 self 参数
+    fn default_user() -> User {
+        User {
+            active: true,
+            username: String::from("default"),
+            email: String::from("default@example.com"),
+            sign_in_count: 0,
+        }
+    }
+}
+     //调用：
+println!("{}", user1.display());
+let default_user = User::default_user();
+
+
+/////////////////////////////////////////////
+
+User {
+    active:true,
+    username: String::from("someusername123"),
+    email: String::from("someone@example.com"),
+    sign_in_count:1,
+};
+
+
+//结构体的更新
+fn main() {
+    let mut user1 = User {
+    active:true,
+    username: String::from("someusername123"),
+    email: String::from("someone@example.com"),
+    sign_in_count:1,       
+    };
+    user1.email = String::from("123@123.com")
+}
+
+
+//更新时的便捷写法
+fn main() {
+    let active = true;
+    let username = String::from("123");
+    let email = String::from("123@123");
+    let user1 = User {
+        active,
+        username,
+        email,
+        sign_in_count: 1,
+    };
+}
+
+
+struct User {
+    active:bool,
+    username: String,
+    email:String,
+    sign_in_count: u32,
+}
+fn main() {
+    let active = true;
+    let username = String::from("milk");
+    let email = String::from("milk@milk.com");
+    let user1 = User {
+        active,
+        username,
+        email,
+        sign_in_count 1,
+    };
+    let User2 = User {
+        email: String::from("123@123.com")
+        ..user1
+    };
+}
+
+
+
+
+
+
+
+
+
+npm run tauri:dev
+
+
+
+
