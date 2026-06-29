@@ -1066,7 +1066,7 @@
 //         username: String::from("anothername567"),
 //         ..user1     // 剩余字段（active 和 sign_in_count）从 user1 复制
 //     };  //注意：..user1 必须放在最后面，表示“未列举的字段都来自 user1”。
-}//这里有个所有权细节：
+// }   //这里有个所有权细节：
 //如果字段是 String 这种没有实现 Copy 的类型，user1 的部分数据会被移动到 user2，
 // 之后 user1 就不能再整体使用了（除非所有字段都实现了 Copy）
 //触发所有权事件的唯一条件是：你试图把某个字段的“所有权”转交给别人（比如 user2）。
@@ -1130,60 +1130,206 @@
 // struct Color(u8, u8, u8);
 // let black = Color(0, 0, 0);   // 访问时用 .0、.1 等，和元组一样。这种适合包装简单数据。
 
+//例子
+// struct Color(i32,i32,i32);
+// struct Point(i32,i32,i32);
+
+// fn main() {
+//     let black = Color(0,0,0);
+//     let origin = Point(0,0,0);
+// }
+
+//变式
+// fn main() {
+//     let black = Color(0, 0, 0);
+//     let origin = Point(0, 0, 0);
+    
+//     // 试图把 Color 赋给 Point 类型的变量
+//     let p: Point = black; // ❌ 编译报错！expected Point, found Color
+// }  //代码里定义了 Color 和 Point，它们内部都是 (i32, i32, i32)，
+//但在 Rust 眼里，它们是两个完全不同的类型！
+
+//运用
+// fn main() {
+//     let black = Color(10, 20, 30);
+//     println!("{}", black.0); // 打印 10
+//     println!("{}", black.1); // 打印 20
+//     println!("{}", black.2); // 打印 30
+// }
+
+//字符串运用
+// struct User(String, String); // 堆上的字符串
+
+// fn main() {
+//     let u1 = User(String::from("alice"), String::from("123"));
+//     let u2 = u1; // 这里就会触发所有权移动！u1 失效
+// }
+
+
 
  //单元结构体（Unit-Like Struct）
 //   没有字段的结构体，常用于表示某种“标志”或实现 trait：
+// 单元结构体就是只有一个类型名字，没有任何字段的结构体
+//    定义和创建实例时，连后面的花括号都可以省略
 // struct AlwaysEqual;
 // let a = AlwaysEqual;
 
+//例子
+// struct ArticleeModule;  // ArticleeModule是类型名
+// fn main() {
+//     let model = ArticleModule;
+// }
 
 //为结构体添加方法（impl 块）
 //   结构体不只是数据的容器，还可以定义行为（方法）。在 impl 块里写函数
-impl User {
-    // 方法：第一个参数是 &self（或 self、&mut self）
-    fn display(&self) -> String {
-        format!("{} <{}>", self.username, self.email)
-    }
+// impl User {
+//     // 方法：第一个参数是 &self（或 self、&mut self）
+//     fn display(&self) -> String {
+//         format!("{} <{}>", self.username, self.email)
+//     }
 
-    // 关联函数（类似静态方法），没有 self 参数
-    fn default_user() -> User {
-        User {
-            active: true,
-            username: String::from("default"),
-            email: String::from("default@example.com"),
-            sign_in_count: 0,
-        }
-    }
-}
-     //调用：
-println!("{}", user1.display());
-let default_user = User::default_user();
+//     // 关联函数（类似静态方法），没有 self 参数
+//     fn default_user() -> User {
+//         User {
+//             active: true,
+//             username: String::from("default"),
+//             email: String::from("default@example.com"),
+//             sign_in_count: 0,
+//         }
+//     }
+// }
+//      //调用：
+// println!("{}", user1.display());
+// let default_user = User::default_user();
+
+
+// Rust有个关键字 impl 可以用来给结构体（或其他类型）实现方法
+   //也就是关联某个类型上面的函数
+// #[derive(Debug)]
+// struct Rectangle {
+//     width: u32,
+//     height: u32,
+// }         
+// impl Rectangle {           
+//     fn area(self,n:u32) -> u32{
+//         self.width * self.height * n   // 此时内存:area的栈帧里,self拿着30和50,n拿着5。
+//     }     //第 3 步：进入 area 方法舞台（计算逻辑）  计算结果 7500 被临时存放在寄存器里，准备返回。
+// }  // 第 4 步：area 方法结束（清场销毁.运行时动作：area 的舞台（栈帧）被整体拆除！
+// //所有权影响：参数 self（即原来的 rect1）作为舞台的一部分，
+// //    随舞台一起被销毁，内存中的 30 和 50 被回收。
+// //    7500 被安全地传递回 main
+// fn main() {
+//     let rect1 = Rectangle {
+//         width:30,
+//         height:50,
+//     }; // //第 1 步：进入 main 函数舞台（分配内存）
+//     println!(       //第 2 步：执行 println! 宏（触发函数调用）
+//         "this is {}",  //电脑要打印东西，必须先算出 rect1.area(5) 的结果。 
+//         rect1.area(5)  //于是，程序暂停打印，跳转到 area 方法。
+//     );     
+// }
+ 
+// 变式
+// #[derive(Debug)]
+// struct Rectangle {
+//     width: u32,
+//     height: u32,
+// }         
+// impl Rectangle {           
+//     fn area1(self,n:u32) -> u32{
+//         self.width * self.height * n    
+//     }
+//      fn area2(&self,n:u32) -> u32{
+//         self.width * self.height * n    
+//     }
+//      fn area3(&mut self,n:u32) -> u32{
+//         self.width * self.height * n    
+//     }      
+// }   
+// fn main() {
+//     let rect1 = Rectangle {
+//         width:30,
+//         height:50,
+//     };  
+//     println!(        
+//         "this is {}",   
+//         rect1.area1(5),    
+//     );     
+// }  // 此变式为错误调用方式，做参考示范
+
+//对同一个类型， impl可以分开写多次，这在组织代码的时候，会带来极大的方便
+  // 结合例子大白话来说：你今后想给 Rectangle 这个类型加多少功能（方法），
+        //随你便。今天写一点，明天写一点，甚至写在不同的文件里，Rust 都认！
+        //最后编译时，它会像拼图一样把所有碎片严丝合缝地拼在一起。
+// impl Rectangle {
+//     fn area(&self) -> u32 {
+//         self.width * self.height
+//     }
+// }
+// impl Rectangle {
+//     fn can_hold(&self,other:&Rectangle) -> bool {
+//         self.width > other.width && self.height > other.height
+//     }
+// }
+
+//例子
+//你可以像整理书柜一样，把相关功能归类。
+//体现了 模块化组织（按功能分组）
+// 文件1：基础计算相关
+// impl Rectangle {
+//     fn area(&self) -> u32 { ... }
+//     fn perimeter(&self) -> u32 { ... }
+// }
+// // 文件2：形状判断相关（写在代码下方，甚至另一个文件里）
+// impl Rectangle {
+//     fn can_hold(&self, other: &Rectangle) -> bool { ... }
+//     fn is_square(&self) -> bool { ... }
+// }
+// //这样，你想找“判断逻辑”时，直接翻到第二个 impl 块就行，不用在一大坨代码里晕头转向
+
+// //还有一个优点是
+//    // 为 Trait（特征）实现留出专属空间（进阶必备）
+// //示例：
+// //比如你可以把“类型自带的基础功能”和“为了兼容某个接口（Trait）实现的功能”彻底分开：（如下）
+// // 基础功能
+// impl Rectangle {
+//     fn new(w: u32, h: u32) -> Self { ... }
+// }
+// // 为了支持“打印调试”而实现的功能（单独隔开，方便删改）
+// impl std::fmt::Display for Rectangle {
+//     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+//         write!(f, "{}x{}", self.width, self.height)
+//     }
+// }
+//Rust要求：给类型实现某个 Trait 时，要么写在定义类型的旁边，
+//    要么写在专门的 impl Trait for Type 块里。
+
 
 
 /////////////////////////////////////////////
 
-User {
-    active:true,
-    username: String::from("someusername123"),
-    email: String::from("someone@example.com"),
-    sign_in_count:1,
-};
+// User {
+//     active:true,
+//     username: String::from("someusername123"),
+//     email: String::from("someone@example.com"),
+//     sign_in_count:1,
+// };
 
 
 //结构体的更新
-fn main() {
-    let mut user1 = User {
-    active:true,
-    username: String::from("someusername123"),
-    email: String::from("someone@example.com"),
-    sign_in_count:1,       
-    };
-    user1.email = String::from("123@123.com")
-}
+// fn main() {
+//     let mut user1 = User {
+//     active:true,
+//     username: String::from("someusername123"),
+//     email: String::from("someone@example.com"),
+//     sign_in_count:1,       
+//     };
+//     user1.email = String::from("123@123.com")
+// }
 
 
 //更新时的便捷写法
-fn main() {
+/* fn main() {
     let active = true;
     let username = String::from("123");
     let email = String::from("123@123");
@@ -1193,10 +1339,10 @@ fn main() {
         email,
         sign_in_count: 1,
     };
-}
+} */
 
-
-struct User {
+//例子
+/* struct User {
     active:bool,
     username: String,
     email:String,
@@ -1207,17 +1353,310 @@ fn main() {
     let username = String::from("milk");
     let email = String::from("milk@milk.com");
     let user1 = User {
-        active,
-        username,
-        email,
-        sign_in_count 1,
+        active,         // 复印 active（Copy），user1 有 true，外面 active 也有 true
+        username,       // ⚠️ 移动！外部的 username 失效
+        email,          // ⚠️ 移动！外部的 email 失效
+        sign_in_count:1,
     };
-    let User2 = User {
-        email: String::from("123@123.com")
+    let user2 = User {
+        email: String::from("123@123.com")  //Rust在堆上新开辟一块内存写入了"123@123.com"。这一步完全不碰 user1。
         ..user1
-    };
+    }; //对于 username（String，非 Copy）
+} */ //注意！ 因为 user2 没有显式写 username，
+//所以 Rust 只能把 user1.username 的所有权指针搬走（移动），
+// 塞给 user2.username。
+// 此时，user1.username 变成未初始化（失效）。
+
+
+// 关联函数（静态方法）
+//  在类型上实现方法，也可以第一个参数不带self参数，这种方法就被称为关联方法
+//例如
+/* impl Rectangle {
+    fn num(rows:u32,cols:u32) -> u32 {
+        rows * cols
+    }
+} */
+//核心定义:
+  //在 Rust 中，如果一个 impl 块里的方法第一个参数不是 self,
+  //  （或者 &self、&mut self），那它就是 关联函数
+
+                                   // 与普通方法的区别：
+
+/*                    对比维度	        普通方法（如 area）	                关联函数（如 num）
+                   第一个参数	     必须是 self / &self / &mut self	    没有 self 参数
+                   调用方式	     通过实例调用：rect1.area()	            通过类型调用：Rectangle::num(5, 10)
+                   能否访问实例数据	✅ 可以（通过 self.width）	       ❌ 不能（因为没拿到实例）
+                   典型用途	        操作具体对象的行为	                 构造器（工厂方法）、工具函数
+ */
+//例子
+/* impl Rectangle {
+    // ✅ 这才是标准的关联函数！返回一个 Rectangle 实例
+    fn new(width: u32, height: u32) -> Self {
+        Rectangle { width, height }
+    }
+    // ✅ 或者创建一个正方形（特殊构造）
+    fn square(size: u32) -> Self {
+        Rectangle { width: size, height: size }
+    }
+}
+fn main() {
+    // 调用方式：使用双冒号 ::
+    let rect = Rectangle::new(30, 50);
+    let sq = Rectangle::square(10);
+} */
+
+//例子 使用impl new一个构造函数
+/* #[derive(Debug)] // 必须添加，才能用 {:?} 打印
+struct User {
+    name: String,
+    age: u32,
+}
+impl User {
+    // 关联函数 new，通常用作构造器
+    fn new(name: String, age: u32) -> Self {
+        User { name, age }
+    }
+}
+fn main() {
+    let user = User::new("张三".to_string(), 18);
+     println!("打印结构体: {:?}", user);
+    
+    // 如果想换行打印字段
+    println!("姓名: {}, 年龄: {}", user.name, user.age);
+} */
+
+//例子 使用impl new一个构造函数，并析构
+/* #[derive(Debug)]
+struct User {
+    name: String,
+    age: u32,
 }
 
+impl User {
+    // 构造器（new）
+    fn new(name: String, age: u32) -> Self {
+        User { name, age }
+    }
+}
+
+// 加上“稀构”（析构）：实现 Drop trait
+impl Drop for User {
+    fn drop(&mut self) {
+        // 这个函数会在实例即将被销毁时自动调用
+        println!("析构中：{} 已被销毁！", self.name);
+    }
+}
+fn main() {
+    let user = User::new("小明".to_string(), 18);
+    
+    // 1. 这是你“最后”主动打印的语句
+    println!("✅ 最后打印结果: {:?}", user);
+    
+    // 2. 函数结束，user 离开作用域，析构函数在这里被自动调用
+    // 控制台会接着打印出那行内容
+} */
+
+//构造函数
+/* Foo::new();
+Foo:from();
+Default */
+
+                               //enum   枚举  | Rust 的枚举是一个“类型容器”
+
+/*    枚举这种类型容纳选型的可能性，每一种可能性的选项都是一个变体
+   Rust的枚举是强大的数据结构 enum就像是一个框子，什么都可以往里面装
+最强大的复合类型
+  enum中的变体，可以作为名字附带各种形式的结构。
+    什么元组结构体，结构体，也可以作为enum的一个变体的存在 
+*/
+// 一般情况下，枚举更多是用来作配置的，并结合match使用
+/* enum WebEvent{
+    PageLoad,   //单元变体--无数据   类比：有名数据（类似结构体）
+    PageUnload,
+    KeyPress(char),  //元组变体--无名数据（类似元组）  类比：送快递（只写内容，不写收件人
+    Paste(String),
+    Click{x: i64,y:i64},  //结构体变体--有名数据（类似结构体） 类比：填表格（必须写明坐标 x 和 y 是谁）
+} */
+
+//实例化变体
+   //实例化变体的时候，也是一致的写法：
+/* let a = WebEvent::PageLoad;
+let b = WebEvent::PageUnload;
+let c = WebEvent::KeyPress('c');
+let d = WebEvent::Paste(String::from("batman"));
+let e = WebEvent::Click{x:320,y:240}; */
+ //实例化靠“双冒号”：必须用 操作类型::变体名 来创建，不能直接创建 操作类型。
+
+//  WebEvent 本身不能直接实例化
+//  写不了 let x = WebEvent，
+//  只能实例化它的某个变体（如例子中的PageLoad）
+
+//空枚举  enum MyEnum{};
+   //其实与空结构体一样，都表示一个类型
+   //但空枚举不能被实例化
+//例如
+/* enum Foo{}
+let a = Foo;  
+*/      // 错误的expected struct
+
+//lmpl enum
+  //枚举同样能够被impl
+//例子：
+/* enum io0efjjjojko {
+    Add,
+    Subtract,
+}
+impl io0efjjjojko {
+    fn run(&self,x:i32,y:i32) -> i32 {
+        match self {
+            Self::Add => x + y,
+            Self::Subtract => x - y,
+        }
+    }
+}
+let add = io0efjjjojko::Add;
+add.run(100,200); */
+
+//变式
+/* enum Operation {
+    Add,
+    Subtract,
+}
+impl Operation {
+    // 注意：这里用的是 &self（不可变引用），所以实例所有权不会被吃掉！
+    fn run(&self, x: i32, y: i32) -> i32 {
+//x和y：数字 100 和 200 是 i32（Copy 类型），Rust 直接复印了一份，放到 run 的栈帧里。
+// &self：add_op 作为 self 被传递时，Rust 没有复制 add_op 的内存，
+//    而是创建了一个指向 add_op 的引用（指针），传递给了 run 方法。
+//    add_op 的所有权完全没有动，依然属于 main。
+        match self { 
+//读取标签：self 是一个指针，CPU 通过它找到 add_op 的内存地址，读取里面存储的标签值，这里值为零               
+            Self::Add => x + y,     // 如果标签是 Add，做加法
+            Self::Subtract => x - y, // 如果标签是 Subtract，做减法  //穷举匹配的短路逻辑
+        }
+    }
+} //run 的栈帧（包含参数 self 的引用、x、y）被整体拆除销毁。
+fn main() {
+    let add_op = Operation::Add; //add_op 成为了这块内存的所有者，里面存着“我是 Add 变体”的标记。
+//在 main 函数的栈上，划出一块小空间。编译器为 Add 这个变体分配了一个固定的标签值（Tag）
+    println!("结果是：{}", add_op.run(100, 200));
+ //先计算的结果，执行流暂停 println!，跳转到 run 方法的代码段。   
+} */
+
+
+// 不能对枚举的变体直接 impl
+   //例如
+/* enum Foo{
+    AAA,
+    BBB,
+    CCC
+}
+impl Foo::AAA {//错误的
+    } */
+//根本原因在于：
+  //Foo 是一个类型（Type），而AAA 是 Foo 这个类型下的一个值（Value）
+  //在 Rust 中，impl 关键字只能用来给类型（Type）扩展方法。你不能给一个具体的“值”扩展方法
+/* 打个比方：
+Foo 就像“汽车厂”这个概念（类型）。
+AAA 就像是汽车厂生产出的“红色跑车”这一型号（值）。
+你只能说“给汽车厂（impl Foo）增加一条生产线（方法）”。
+你不可能说“专门给停在停车场的‘红色跑车’（impl Foo::AAA）增加一条生产线”——
+因为那是具体的一辆车，不是制造图纸。 */
+
+
+                                                // Rust的模式匹配
+
+//概念来自于函数式语言Haskell等，意思就是按照对象值的结构形态进行匹配
+
+//使用match来做分支流程
+/* 
+fn main() {
+    let num = 13;
+    println!("tell about {}",num);
+    match num {  //进入 match 分支（自上而下“查表”）
+        1 => println!("one!"),
+        2 | 3 | 5 | 7 | 11 => println!("this is a prime"), 
+// " | " 是 “或” 运算符：2 | 3 | 5 表示“匹配 2 或 3 或 5”。
+        13..=19 => println!("A teen"), //"..=" 是 “包含范围”：13..=19 表示“匹配 13、14、...、19”
+        _=> println!("ain't special"), 
+        // _ 是一个通配符（Wildcard），它匹配所有未被前面分支捕获的值。因为 match 要求穷尽性
+    }
+    let boolean = true;
+    let binary = match boolean {  //使用 match 作为表达式（Expression）返回值
+//这是 Rust 比 C/Java 的 switch 强大得多的地方：match 不仅仅是一个语句，它还可以返回一个值!
+        false => 0,
+        true => 1, 
+/* 拿着 true 去比对第一个分支 false？不匹配。
+拿着 true 去比对第二个分支 true？匹配成功！
+执行 => 右侧的代码块（这里就是数字 1）
+这个数字 1 被当作整个 match 表达式的结果，返回给 binary 变量
+最终结果：binary 被赋值为 1 */
+    };
+    println!("{} -> {}",boolean,binary);
+} //没有涉及 String 或 Vec，没有所有权移动（Move）情况，只有复印（Copy）和借用（Borrow），绝对安全。
+*/
+
+                  //Match结合枚举   全部分支必须处理
+
+// 例子【Rust 枚举（Enum）和模式匹配（Match）“双剑合璧”的教科书级示范】
+/*
+#[derive(Debug)]
+enum UsState {
+    Alabama,
+    Alaska,
+}
+enum Coin{
+    Penny,
+    Nickel,
+    Dime,
+    Quarter(UsState),
+}
+fn value_in_cents(coin: Coin) -> u8 { // 第四步：进入 value_in_cents 的“匹配车间”
+    match coin {
+        Coin::Penny => 1,
+        Coin::Nickel => 5, 
+        Coin::Dime => 10,
+        //比对第 4 条（Quarter）：匹配成功
+        Coin::Quarter(state) => {  //这里触发了 Rust 最强大的机制——解构
+            println!("State quarter from {:?}!",state);  
+            25    //返回数字 25                           
+                                    /* 当匹配到 Coin::Quarter(state) 时，Rust 会自动把包裹里的东西拆开，
+                                        把里面藏着的州数据（Alabama）提取出来，绑定到新的局部变量 state 上 */
+        }
+    }
+}
+/* 
+所有权事件：
+因为 coin 拥有这个州数据的所有权，
+state 在这里相当于借用了 coin 的内部数据
+（或者通过移动获得，取决于匹配方式。这里用的是 match coin（移动），
+所以 state 实际上接手了 coin 内部州数据的所有权，
+但 coin 马上就要被销毁了，所以完全合法安全） 
+*/
+fn main() {
+    let a = UsState::Alabama; //第一步：创建州数据
+                                            /* 内存事件：在 main 的栈上创建了一个标签（Tag），
+                                                   代表 Alabama。因为它没有附带数据，所以只有一个字节大小 */  
+    let b = Coin::Quarter(a); // 第二步：把州“装进”硬币
+                                /* 内存事件：创建了一个 Coin 枚举实例。Quarter 这个变体就像“一个包裹”，它把外部变量 a（州数据）塞进了包裹里
+                                所有权事件：因为 UsState 没有实现 Copy（虽然它只有单元变体，但你没给它 derive(Copy)，所以默认是 Move），
+                                            所以这里的 a 被移动（Move） 进了 b 的内部。从此，a 失效，b 完全拥有这块州数据 */
+    let r = value_in_cents(b); //第三步：调用计算函数（关键跳转）
+//所有权事件（重要）：b 被整体移动（Move） 进了函数的参数 coin。main 里的 b 从此失效（但后面没用 b，所以安全）
+    println!("{}",r);
+} 
+*/
+
+
+/* 匹配中的“变量绑定”：
+    Coin::Quarter(state) 不仅能匹配变体，还能把里面的数据拿出来，
+    赋给 state 变量。这叫解构（Destructuring）。
+所有权会随解构传递：
+     在上面的匹配中，state 拿到了 coin 里州数据的所有权（因为 coin 是按值传入的）。
+     但打印完 state 后，函数结束，一切被销毁，完美无瑕
+println! 里的 {:?}：
+     因为你在 UsState 上面写了 #[derive(Debug)]，所以可以直接用 {:?} 打印出 Alabama，
+     否则 Rust 会报错，因为你没有告诉它怎么格式化打印这个结构体 */
 
 
 
@@ -1226,7 +1665,11 @@ fn main() {
 
 
 
-npm run tauri:dev
+
+
+
+
+// npm run tauri:dev
 
 
 
