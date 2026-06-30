@@ -1647,7 +1647,6 @@ fn main() {
 } 
 */
 
-
 /* 匹配中的“变量绑定”：
     Coin::Quarter(state) 不仅能匹配变体，还能把里面的数据拿出来，
     赋给 state 变量。这叫解构（Destructuring）。
@@ -1660,6 +1659,393 @@ println! 里的 {:?}：
 
 
 
+//if let
+//只有两个分支或在这个位置先只想处理一个分支的情况
+/* #[derive(Debug)]
+enum Coin {
+    Penny,
+    Nickel,
+    Dime,
+    Quarter(String),  // Quarter 变体带有一个 String 类型的州名
+} //前置条件
+//不使用if let的情况
+let mut count = 0; //声明一个可变变量 count，初始值为 0。因为后面要对它进行 += 1 修改，所以必须是 mut。
+match coin {
+    Coin::Quarter(state) => println!("State quarter from {:?}",state),
+    _=>count += 1, //只有碰到不是 Quarter 的硬币才计数 【下划线 _ 是通配符，匹配其他所有情况Penny, Nickel, Dime】
+}
+//使用if let的情况
+let mut count = 0;
+if let Coin::Quarter(state) = coin {    // match的语法糖
+    println!("State quarter from {:?}",state); //等价于：如果 coin 能匹配 Coin::Quarter(state)，就执行大括号里的内容；否则执行 else 块
+} else {
+ count +=1;
+ } */
+
+/* “只有两个分支或在这个位置先只想处理一个分支的情况”
+如果只关心一个模式，其他情况统统忽略，if let 非常简洁，甚至不需要 else
+例如：
+if let Coin::Quarter(state) = coin {
+    println!("这是一个25美分，来自{:?}!", state);
+}  // 不是 Quarter 就不做任何事
+如果需要两个分支（一个特殊处理，另一个兜底），就像上述代码，if let ... else 也能胜任 */
+
+
+//相对于match，在分支体代码比较多的情况下，if let可以少一层括号
+// match 版本：每个分支的代码需要用一对花括号，而且要注意缩进
+/* match coin {
+    Coin::Quarter(state) => {
+        println!("处理 Quarter ...");
+        // 假设还有更多行
+        some_function(state);
+    }
+    _ => {
+        count += 1;
+        println!("其他硬币，计数增加");
+    }
+}
+// if let 版本：两个分支本身就是 if/else 的大括号，看起来更“平”
+if let Coin::Quarter(state) = coin {
+    println!("处理 Quarter ...");
+    some_function(state);
+} else {
+    count += 1;
+    println!("其他硬币，计数增加");
+} */
+
+
+
+ //while let
+/* fn main() {
+    let mut optional = Some(0);
+    while let Some(i) = optional {    //由于类型是 i32 ，故此所有权每一次都是复制，没有移动
+        if i > 9 {
+            println!("great than 9,quit");
+            optional = None;
+        }else {
+            println!("'i' is {:?}.再次测试",i);
+            optional = Some(i +1);
+        }
+    }
+} */
+/* 初始：optional = Some(0)
+a.第一次循环：while let Some(i) = optional
+    模式匹配成功，i 获得值 0。i <= 9，打印 'i' is 0.再次测试，然后 optional = Some(1)。
+b.第二次循环：optional 现在是 Some(1)，匹配成功，i = 1，打印并赋值 Some(2)。
+c.重复，直到 i = 10 时：
+    循环头 while let Some(i) = optional 匹配成功，i = 10。
+    i > 9 成立，打印 great than 9,quit，并将 optional 设为 None。
+d.再次回到循环头：while let Some(i) = optional 此时 optional 是 None，匹配失败，循环退出。
+e.程序结束。 */
+ 
+//如果类型不是 Copy，会是怎样的？
+//例子：换一个非 Copy 类型，比如 Option<String>
+/* fn main() {
+    let mut optional = Some(String::from("hello"));
+    while let Some(s) = optional {   // 错误！optional 被移动
+        // ...
+        optional = Some(s);
+    }
+} */
+/* 会编译失败，因为第一次匹配时 optional 的整体所有权被移入了 match，
+被解构成 s，原 optional 已经无效，不能在循环头再次使用。 */
+    
+//解决方法是：匹配引用
+/* let mut optional = Some(String::from("hello"));
+while let Some(ref s) = optional {   // 或者&optional
+    // 此时 s: &String
+    println!("{}", s);
+    optional = None;  // 或更新为其他值
+} */
+
+
+// Let本身就是模式匹配：元组解构
+//let本身就支持模式匹配，实际前面if let,while let,都是用的let的能力
+/* fn main() {
+    let a = (1,2,'a');  //这个例子中所有元素都是 Copy,所有元组本身也会实现 Copy。
+    let (b,c,d) = a;    //这是一个不可驳模式（irrefutable pattern）：元组结构保证匹配必然成功
+                        //let 模式匹配默认是按值移动。它会将 a 的各个字段移动给 b、c、d。
+                        //但由于所有字段都是 Copy，实际上做的是逐位复制
+    println!("{:?}",a);
+    println!("{
+    }",b);
+    println!("{}",c);
+    println!("{}",d);
+} */
+/* Rust 的设计哲学：
+let 语句的左侧不仅可以是一个简单的变量名，而是一个模式。
+例如：
+let (x, y) = (3, 4);          // 元组解构
+let [a, b] = [10, 20];        // 数组解构（需要尝试，目前稳定吗？暂时用切片匹配）
+let Some(value) = maybe;      // 不可驳模式，如果 maybe 是 None 会 panic */
+
+
+
+
+//匹配元组
+//这种用法，叫做元组体的析构，常用来从函数的多返回值中取出数据
+/* fn foo() -> (u32,u32,char) {
+    (1,2,'a')             //返回一个字面量元组 (1, 2, 'a')
+}
+fn main() {
+    let (b,c,d) = foo(); //一次不可驳模式匹配（元组解构）
+
+    println!("{}",b);
+    println!("{}",c);
+    println!("{}",d);
+} */
+
+//如果换成非 Copy 类型会怎样？ 
+//例如：（把 u32 换成 String）
+/* fn foo() -> (String, String, char) {
+    (String::from("hello"), String::from("world"), 'a')
+}
+fn main() {
+    let (b, c, d) = foo(); // b, c 获得 String 的所有权，这是移动
+    // 这里我们可以用 b, c, d
+
+} */
+//这时解构会直接移动所有权，没有复制。但因为是临时返回值，移动是自然且高效的，没有冲突
+
+
+//匹配结构体
+/* struct User{
+    name:String,
+    age:u32,
+    student:bool
+}
+fn main() {
+     // 1. 创建 User 实例 a
+    let a = User {
+        name:String::from("mike"),
+        age:21,
+        student:false,
+    };
+    // 2. 结构体解构：把 a 的每个字段取出来，绑定到同名变量。即 把字段提取出来绑定到新变量
+    let User {    
+        name,
+        age,
+        student,
+    } =a;   // 右侧 a 是一个 User 类型的值 
+    // 结束括号外的 = a 就是模式匹配的赋值符号，和 let x = 5; 中的 = 完全一样，只是左侧模式更复杂。
+
+    // 3. 打印解构出的变量
+    println!("{}",name);
+    println!("{}",age);
+    println!("{}",student);    
+} */
+/* 其实解构时也可以重命名
+例如：let User { name: user_name, age: user_age, student: is_student } = a;
+现在用 user_name, user_age, is_student */
+/* 当然，该例子中：也可以 不用解构：直接访问字段
+let a = User {
+    name: String::from("mike"),
+    age: 21,
+    student: false,
+};
+
+// 直接通过 a 访问字段
+println!("{}", a.name);    // mike
+println!("{}", a.age);     // 21
+println!("{}", a.student); // false
+
+// a 仍然有效，可以继续使用
+println!("再次使用名字：{}", a.name); */
+
+
+
+//函数中的模式匹配
+//例子1
+/* fn foo((a, b, c): (u32, u32, char)) {
+    println!("{}", a);
+    println!("{}", b);
+    println!("{}", c);
+}
+fn main() {
+    let a = (1, 2, 'a');
+    foo(a);   // foo(a) 把 a 的所有权移动到函数的参数中
+} */
+
+//例子2
+// #[derive(Debug)]
+// struct User {
+    // name:String,
+    // age:u32,
+    // student:bool
+// }
+// fn foo(User {
+    // name,
+    // age,
+    // student
+// }: User) {    // =a
+    // println!("{}",name);
+    // println!("{}",age);
+    // println!("{}",student);
+// }
+// fn main() {
+    // let a = User {
+        // name: String::from("mike"),
+        // age:21,
+        // student:false,
+    // };
+    // foo(a);
+// }
+
+
+
+
+//Vec（动态数组） 与 HashMap的一些经验
+   //切片
+   //元素所有权
+
+//引用到切片引用的自动转换
+        // &String -> &str
+        // &Vec<u8> -> &[u8]
+        // &Vec<T> -> &[T]
+// 这里描述的是 解引用强制转换（deref coercion）。
+// 当函数参数期望一个引用类型 &T，而我们传入的是 &U 时，
+//    如果 U 实现了 Deref<Target = T>，Rust 就会自动帮你把 &U 转换为 &T。这可以理解为：
+//    
+        // String 实现了 Deref<Target = str>，所以 &String 可以自动变成 &str。
+        // Vec<T> 实现了 Deref<Target = [T]>，所以 &Vec<T> 可以自动变成 &[T]。
+// 
+// 这个机制让我们能写出泛用性更强的函数签名（比如接收 &str 而不是 &String），
+// 同时调用方不必手动写 &s[..]，直接传 &s 即可。
+
+
+
+
+//例子
+//fn foo1(s: &str) {
+//}
+//fn main() {
+//    let s = String::from("aaa");
+//    foo1(&s);  // &String -> &str 自动转换   注：&s 取引用，类型是 &String，不移动所有权
+//    let v: Vec<u32> = vec![1,2,3,4,5];    
+//    foo2(&v);   // &Vec<u32> -> &[u32] 自动转换
+//}  
+
+// main 中创建 s: String，拥有堆上字符串的所有权。
+// &s 取引用，类型是 &String，不移动所有权。
+// 调用 foo1(&s)，因为 foo1 的参数是 &str，触发了 &String -> &str 的解引用强制转换。
+//   在函数内部，s 参数是一个指向原字符串数据的切片引用，不可变借用。
+// 同理，v 是 Vec<u32>，&v 得到 &Vec<u32>，传给 foo2(&v) 时自动转为 &[u32]，即指向堆上数组的切片引用。
+// 整个过程 没有发生任何所有权转移，main 依然拥有 s 和 v，可以在调用后继续使用。
+
+//变式
+// fn foo1(s: &str) {
+// 
+// }
+// fn foo2(s: &[u32]) {
+// 
+// }
+// fn main() {
+    // let s = String::from("aaa");
+    // foo1(&s);
+    // foo1("aaaabbbbb"); //直接传字符串字面量
+    // let v: Vec<u32> = vec![1,2,3,4,5];
+    // foo2(&v);
+// }
+/* 字符串字面量 "aaaabbbbb" 的类型本身就是 &str。 */
+/* 它是一段编译时就写入二进制文件的静态数据，生命周期为 'static。 */
+/*    所以它完全匹配 foo1(s: &str) 的参数类型，不需要任何转换。 */
+/* 这就是为什么很多 Rust API 都选择用 &str 而不是 &String： */
+/*    调用者可以传 &String（自动转换）或直接传字面量，灵活性最大化。 */
+
+
+
+//  Vec中的所有权
+    /* Vec<String> 是对String带来所有权的
+    那Vec<>中，自然也能放Vec<&Str>这种引用
+    可以看出，所有权不能move出来，只能使用引用去访问 */
+
+//例子
+// fn main() {
+    // let s1 = String::from("一");
+    // let s2 = String::from("二");
+    // let s3 = String::from("三");
+    // let s4 = String::from("四");
+// 
+    // let v = vec![s1,s2,s3,s4];   // s1~s4 的所有权移入 Vec
+// 
+    // println!("{:?}",v);
+// 
+    // let a = v[0]; //不能move所有权出来，只能获取引用
+// }
+// 创建 v 时，四个 String 的所有权都被移动到 Vec 的堆内存里。v 现在是这些字符串的唯一所有者
+// v[0] 是一个索引操作，无论你怎么写，v[0] 返回的都是一个引用（这里是 &String）
+// 所以 let a = v[0]; 会让 a 被推断为 &String，而不是 String，你并没有也不能把 String 的所有权“移出来”
+// 这行代码可以编译通过（a 是一个不可变借用），但是没办法通过索引拿走 Vec 元素的所有权。
+
+//变式
+// fn main() {
+    // let s1 = String::from("一");
+    // let s2 = String::from("二");
+    // let s3 = String::from("三");
+    // let s4 = String::from("四");
+// 
+    // let v = vec![s1,s2,s3,s4];
+// 
+    // println!("{:?}",v);
+// 
+    // let a = &v[0]; //此处能move出来吗？  答案：不能
+// }
+// v[0] 本身就已经返回 &String 了，你再在前面加一个 &，就变成了 & (&String)，即 &&String。
+// 这和“移动所有权”完全无关，只是在已有引用上再取引用。
+// 这行代码能编译，但它并没有把 String 的所有权移出来，v 仍然持有所有权。
+// 这里依然只是借用了两次，根本没有发生所有权转移
+
+
+//变式
+// fn main() {
+    // let s1 = String::from("一");
+    // let s2 = String::from("二");
+    // let s3 = String::from("三");
+    // let s4 = String::from("四");
+// 
+    // let v = vec![s1,s2,s3,s4];
+// 
+    // println!("{:?}",v);
+// 
+    // let a = &mut v[0]; //此处能move出来吗？  答案：不能
+// } 
+// 这段代码无法编译，因为违反了借用规则
+// println!("{:?}", v); 对 v 进行了一次不可变借用（通过 Display/Debug）。
+// 紧接着 let a = &mut v[0]; 尝试对 v 进行可变借用。
+// Rust 的借用规则禁止同时存在不可变借用和可变借用
+    // （即使是访问不同字段，因为编译器无法彻底分析 Vec 的内部结构，
+    //  它保守地将索引操作视为对整体 v 的借用）。
+// 所以编译器会报错：
+    // cannot borrowvas mutable because it is also borrowed as immutable
+
+
+
+
+
+
+//HashMap中的所有权
+    /*   Hashmap是不会把里面内容的所有权让出来的
+    insert, entry, get, get_mut, iter, iter_mut */
+
+
+// Vec 和 HashMap 中的元素所有权如何拿出来？
+//通过迭代器 .into_iter()
+
+
+
+
+/* let User { name, age, student } = a;   // 解构到当前作用域变量 */
+/* foo(User { name, age, student }: User)  // 解构到函数参数变量 */
+/* 语法形式完全一样：左侧模式 = 值。 */
+/* 在函数参数中，= 变成了 : 用于类型标注，但模式解构的本质不变。 */
+
+
+
+
+
+
+
+//第四课 类型、Trait
 
 
 
@@ -1668,6 +2054,31 @@ println! 里的 {:?}：
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* 我是一个计算机编程小白，以前还没有学习过编程语言，现在正在刚开始学习Rust语言，
+   --我需要你的帮助，邀请你作为我的Rust语言老师，请你教导我完成Rust语言的内容，致力于帮助我学会Rust语言。
+   --教授的方式为：我将会给你返回由Rust语言编写的代码块，请你围绕着我的代码块，
+   --从Rust语言的所有权，生命周期，借用与引用，代码块的运行逻辑顺序并且结合代码块原有的注释来进行分析解析代码，
+   --必要的情况下，允许生成新的代码块例子来进行进一步解答 */
 
 // npm run tauri:dev
 
