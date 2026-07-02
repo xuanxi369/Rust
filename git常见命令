@@ -3,3 +3,10 @@ git add .
 git commit -m 
 git pull --rebase origin feature/CanvasMusk
 git push -u origin feature/CanvasMusk
+
+
+
+
+大规模冲突且该分支属于你
+git rebase --abort
+git push origin feature/CanvasMusk --force-with-lease
